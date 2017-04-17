@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>3 Col Portfolio - Start Bootstrap Template</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+    integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">    
+    <link href="css/custom.css" rel="stylesheet">
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+</head>
+
+<body>            <hr>
+            <div class="row">
+                <div class="container">
+                    <div class="input-group">
+                        <input id="messageTextArea" type="text" class="form-control" placeholder="Write a message...">
+                        <span class="input-group-btn">
+                            <button data-room="default" id="sendButton" class="btn btn-default" type="button">Send!</button>
+                        </span>
+                    </div><!-- /input-group -->
+                </div>
+            </div>
+    <div class="container">
+        <div class="row">
+        
+                <div class="tabbable-panel">
+                    <div class="tabbable-line">
+                        <ul id="topbar" class="nav nav-tabs ">
+                            <li class="">
+                                <a id="plusButton" href="#tab_default_plus" data-toggle="tab" >
+                                <b>+</b> 
+                                </a>
+                            </li>
+                            <li class="active">
+                                <a data-room="default" class="joinRoomLink" href="#tab_default_1" data-toggle="tab">
+                                <b>Overview</b> 
+                                </a>
+                            </li>
+                        </ul>
+                        <div id="tabContentDiv" class="tab-content">
+                           <div class="tab-pane active" id="tab_default_1">
+                               <div role="tabpanel" class="tab-pane active" id="home">
+                                <div id="chatDiv_default" class="container">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script>
+    let name;
+    name = prompt('Enter your nickname:');
+    if (name == null) {
+        name = 'RandomUser'
+    }
+
+    var socket = io.connect('http://localhost:3000');
+    socket.on('message', function (data) {
+        console.log(JSON.stringify(data));
+        //console.log('got message from server: ' + data.nickname + ' ' + data.message);
+        $(messageTemplate(data.nickname, data.message)).hide().prependTo($('#chatDiv_' +  $('#sendButton').data('room'))).show(500);
+    });
+    socket.on('connect', function() {
+            console.log('socket.io connected!');
+            socket.emit('join room', 'default');
+            sendMsg('Hi to everyone, I just connected!', "default");
+    });
+    socket.on('disconnect', function() {
+            console.log('socket.io connected!');
+    });
+    function sendMsg(message, room) {
+        console.log('send msg');
+        let msg = {};
+        msg.app_id = this.appName;
+        msg.time = Date.now();
+        msg.json = 'json';
+        msg.nickname = name;
+        msg.message = message;
+        msg.room = room;
+        socket.json.emit("message", msg);
+
+    }
+    socket.on('add room', function (data) {
+        console.log("add room: " + data);
+        //console.log('got message from server: ' + data.nickname + ' ' + data.message);
+        const link = $(tabTemplate(data));
+        $(link).appendTo('#topbar').hide().show('slow');
+        $(tabContentTemplate(data)).appendTo('#tabContentDiv');
+        link.on('click', linkOnClickListener);
+    });
+    
+    const messageTemplate = (name, message) => {
+        return `
+        <div class="panel panel-default">
+            <div class="panel-heading"><b>${name}</b></div>
+            <div class="panel-body">
+                ${message}
+            </div>
+        </div>
+        `;
+    };
+    const tabTemplate = (tabName) => {
+        return `
+        <li class="">
+            <a data-room="${tabName}" href="#tab_${tabName}" class="joinRoomLink" data-toggle="tab">
+                <b>${tabName}</b> 
+            </a>
+        </li>
+        `;
+    };
+    const tabContentTemplate = (tabName) => {
+        return `
+        <div class="tab-pane" id="tab_${tabName}">
+            <div role="tabpanel" class="tab-pane" id="home">
+
+            <hr>
+            <div id="chatDiv_${tabName}" class="container">
+            </div>
+        </div>
+        `;
+    };
+
+    $('#sendButton').on('click', () => {
+        console.log($('#messageTextArea').val());
+        console.log($('#sendButton').data('room'));
+        sendMsg($('#messageTextArea').val(), $('#sendButton').data('room'));
+    });
+    $('#plusButton').on('click', () => {
+         const roomName = prompt('Enter name of the room to be created:');
+         if (roomName != null) {
+            sendMsg(roomName, 'add room'); 
+            socket.json.emit('add room', roomName);
+         }
+    });
+
+    const linkOnClickListener = (event) => {
+        let joinRoomName;
+        if (event.target.tagName == 'B') {
+            //console.log($(event.target.parentElement).data('room'));
+            $(event.target.parentElement).data('room');
+        joinRoomName = $(event.target.parentElement).data('room');
+        } else {
+            //console.log($(event.target).data('room'));     
+            joinRoomName = $(event.target).data('room');
+        }
+        
+        $('#sendButton').data('room', joinRoomName);
+        console.log('seeting room data: '+  joinRoomName);
+        socket.emit('join room', joinRoomName);
+    }
+    $('.joinRoomLink').on('click', linkOnClickListener);
+
+    </script>
+</body>
+
+</html>
